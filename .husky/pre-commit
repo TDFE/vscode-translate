@@ -1,0 +1,4 @@
+#!/bin/sh
+. "$(dirname "$0")/_/husky.sh"
+echo "开始对修改文件进行eslint校验"
+npx --no-install lint-staged --allow-empty --no-stash
