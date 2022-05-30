@@ -3,7 +3,7 @@
  * @Author: 郑泳健
  * @Date: 2022-05-27 18:22:28
  * @LastEditors: 郑泳健
- * @LastEditTime: 2022-05-30 15:07:17
+ * @LastEditTime: 2022-05-30 17:52:15
  */
 import * as vscode from 'vscode';
 import * as fs from 'fs';
@@ -33,7 +33,7 @@ export const getValue = <T extends Object>(obj: T, list: string[]) => {
         }
         return obj;
     } catch (e) {
-        return '获取失败';
+        return '';
     }
 };
 
@@ -41,14 +41,16 @@ export const getValue = <T extends Object>(obj: T, list: string[]) => {
  * 获取所有语言包的配置
  * @returns
  */
-export const languageMap = () => {
-    // @ts-ignore
-    const rootPath = vscode.workspace.workspaceFolders[0].uri.path;
-    const files = fs.readdirSync(rootPath + '/.kiwi');
+export const getLanguageMap = (kiwiPath: string) => {
+    const files = fs.readdirSync(kiwiPath);
 
     return files.reduce((total, item) => {
+        // 因为require会缓存结果，导致每次结果都不更新，所以需要清除
+        Object.keys(require.cache).forEach(function (key) {
+            delete require.cache[key];
+        });
         // @ts-ignore
-        total[item] = require(rootPath + `/.kiwi/${item}`);
+        total[item] = require(`${kiwiPath}/${item}`);
         return total;
     }, {});
 };

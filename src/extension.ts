@@ -1,11 +1,14 @@
 import * as vscode from 'vscode';
-import { getValue, languageMap, getCurrentLanguage } from './utils/index';
+import { getValue, getLanguageMap, getCurrentLanguage } from './utils/index';
 
 export function activate(context: vscode.ExtensionContext) {
-    // 获取当前工程的所有语言包
-    const map = languageMap();
+    // @ts-ignore
+    const kiwiPath = vscode.workspace.workspaceFolders[0].uri.path + '/.kiwi';
+
+    // 获取当前工程的所有语言包,放到globalState
+    context.globalState.update('languageMap', getLanguageMap(kiwiPath));
     // 获取当前的语言
-    const currentLanguage: string | undefined = getCurrentLanguage();
+    context.globalState.update('currentLanguage', getCurrentLanguage());
 
     const disposable = vscode.languages.registerHoverProvider(['json', 'javascript', 'typescript'], {
         provideHover(document, position) {
@@ -26,6 +29,8 @@ export function activate(context: vscode.ExtensionContext) {
 
             let paths: string[] = [];
 
+            const currentLanguage = context.globalState.get('currentLanguage');
+
             if (!currentLanguage) {
                 return new vscode.Hover('请先在vscode设置里面配置语言');
             }
@@ -39,13 +44,47 @@ export function activate(context: vscode.ExtensionContext) {
                 paths = [];
             }
 
-            // @ts-ignore
-            const value = getValue(map[currentLanguage], paths);
-            return value ? new vscode.Hover(String(value)) : undefined;
+            // 获取当前的语言包
+            const languageMap = context.globalState.get('languageMap');
+
+            if (languageMap) {
+                // @ts-ignore
+                const value = getValue(languageMap[currentLanguage], paths);
+                return new vscode.Hover(value ? String(value) : `当前语言为${currentLanguage},匹配不到对应的key`);
+            }
+
+            return undefined;
         }
+    });
+
+    // 监听设置里面的配置是否有更新
+    vscode.workspace.onDidChangeConfiguration(function (event) {
+        const configList = ['tongdun'];
+        const affected = configList.some(item => event.affectsConfiguration(item));
+        if (affected) {
+            context.globalState.update('currentLanguage', getCurrentLanguage());
+        }
+    });
+
+    // 监听.wiki文件夹的内容更改
+    const watcher = vscode.workspace.createFileSystemWatcher(new vscode.RelativePattern(kiwiPath, '**/*.js'), false, false, false);
+
+    watcher.onDidChange(e => { // 文件发生更新
+        context.globalState.update('languageMap', getLanguageMap(kiwiPath));
+    });
+
+    watcher.onDidCreate(e => { // 新建了js文件
+        context.globalState.update('languageMap', getLanguageMap(kiwiPath));
+    });
+
+    watcher.onDidDelete(e => { // 删除了js文件
+        context.globalState.update('languageMap', getLanguageMap(kiwiPath));
     });
 
     context.subscriptions.push(disposable);
 }
 
-export function deactivate() { }
+export function deactivate(context: vscode.ExtensionContext) {
+    context.globalState.update('languageMap', {});
+    context.globalState.update('currentLanguage', '');
+}
