@@ -3,7 +3,7 @@
  * @Author: 郑泳健
  * @Date: 2022-05-27 18:22:28
  * @LastEditors: 郑泳健
- * @LastEditTime: 2022-06-07 17:46:52
+ * @LastEditTime: 2022-06-07 19:15:34
  */
 import * as vscode from 'vscode';
 import * as fs from 'fs';
@@ -25,31 +25,6 @@ class Position {
     // @ts-ignore
     code: string;
 }
-
-// 缓存当前In18对应的key的position位置
-class Cache {
-    memories = [] as Array<{ code: string; positions: Position[] }>;
-    addCache(code: string, positions: Position[]) {
-        this.memories.push({
-            code,
-            positions
-        });
-
-        if (this.memories.length > 8) {
-            this.memories.shift();
-        }
-    }
-    getPositionsByCode(code: string) {
-        const mem = this.memories.find(mem => mem.code === code);
-        if (mem && mem.positions) {
-            return mem.positions;
-        }
-
-        return false;
-    }
-}
-
-const cache = new Cache();
 
 /**
  * 获取所有语言包的配置
@@ -145,7 +120,7 @@ export const transformPosition = (pos: Position, editorText: string, toLastCol?:
  */
 export const setLineDecorations = (context: vscode.ExtensionContext, activeEditor: vscode.TextEditor) => {
     const code = activeEditor.document.getText();
-    console.log(code)
+
     const positions = findI18NPositions(context, code);
     let decorations = [];
     decorations = (positions || []).map((pos: Position) => {
@@ -174,10 +149,6 @@ export const setLineDecorations = (context: vscode.ExtensionContext, activeEdito
  * @param code
  */
 export const findI18NPositions = (context: vscode.ExtensionContext, code: string) => {
-    const cachedPoses = cache.getPositionsByCode(code);
-    if (cachedPoses) {
-        return cachedPoses;
-    }
     const currentLanguage = context.globalState.get('currentLanguage');
     const languageMap = context.globalState.get('languageMap');
     // @ts-ignore
@@ -195,7 +166,6 @@ export const findI18NPositions = (context: vscode.ExtensionContext, code: string
         return `${position.code}-${position.line}`;
     });
 
-    cache.addCache(code, matchPositions);
     return matchPositions;
 }
 

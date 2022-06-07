@@ -44,14 +44,23 @@ export function activate(context: vscode.ExtensionContext) {
 
     watcher.onDidChange(e => { // 文件发生更新
         context.globalState.update('languageMap', getLanguageMap(kiwiPath));
+        if (activeEditor) {
+            setLineDecorations(context, activeEditor)
+        }
     });
 
     watcher.onDidCreate(e => { // 新建了js文件
         context.globalState.update('languageMap', getLanguageMap(kiwiPath));
+        if (activeEditor) {
+            setLineDecorations(context, activeEditor)
+        }
     });
 
     watcher.onDidDelete(e => { // 删除了js文件
         context.globalState.update('languageMap', getLanguageMap(kiwiPath));
+        if (activeEditor) {
+            setLineDecorations(context, activeEditor)
+        }
     });
 
     context.subscriptions.push(changeActiveTextEditor);
