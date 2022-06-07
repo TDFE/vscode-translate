@@ -1,9 +1,5 @@
 # Change Log
 
-All notable changes to the "td-vscode-translation" extension will be documented in this file.
+## [1.0.0]
 
-Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
-
-## [Unreleased]
-
-- Initial release
+- 打开文件默认显示翻译后的结果

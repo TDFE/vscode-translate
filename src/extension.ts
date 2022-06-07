@@ -1,61 +1,34 @@
 import * as vscode from 'vscode';
-import { getValue, getLanguageMap, getCurrentLanguage } from './utils/index';
+import { getLanguageMap, getCurrentLanguage, setLineDecorations } from './utils/index';
 
 export function activate(context: vscode.ExtensionContext) {
     // @ts-ignore
     const kiwiPath = vscode.workspace.workspaceFolders[0].uri.path + '/.kiwi';
-
     // 获取当前工程的所有语言包,放到globalState
     context.globalState.update('languageMap', getLanguageMap(kiwiPath));
     // 获取当前的语言
     context.globalState.update('currentLanguage', getCurrentLanguage());
 
-    const disposable = vscode.languages.registerHoverProvider(['json', 'javascript', 'typescript'], {
-        provideHover(document, position) {
-            const fileName = document.fileName;
+    let activeEditor = vscode.window.activeTextEditor;
 
-            // 获取一整行的内容
-            const lineText = document.getText(new vscode.Range(
-                position.line,
-                0,
-                position.line,
-                500
-            ));
+    if (activeEditor) {
+        setLineDecorations(context, activeEditor)
+    }
 
-            // 如果是.kiwi文件夹或者这一行没有I18N这个字符就没有提示
-            if (fileName.includes('.kiwi') || !lineText.includes('I18N')) {
-                return undefined;
-            }
-
-            let paths: string[] = [];
-
-            const currentLanguage = context.globalState.get('currentLanguage');
-
-            if (!currentLanguage) {
-                return new vscode.Hover('请先在vscode设置里面配置语言');
-            }
-
-            try {
-                // @ts-ignore
-                const matchPath = lineText.match(/I18N[a-zA-Z.0-9]*/g) ? lineText.match(/I18N[a-zA-Z.0-9]*/g)[0] : '';
-                paths = matchPath.split('.');
-                paths.shift();
-            } catch (e) {
-                paths = [];
-            }
-
-            // 获取当前的语言包
-            const languageMap = context.globalState.get('languageMap');
-
-            if (languageMap) {
-                // @ts-ignore
-                const value = getValue(languageMap[currentLanguage], paths);
-                return new vscode.Hover(value ? String(value) : `当前语言为${currentLanguage},匹配不到对应的key`);
-            }
-
-            return undefined;
+    // 切换文档时候重新获取当前文档中的中文文案
+    const changeActiveTextEditor = vscode.window.onDidChangeActiveTextEditor(editor => {
+        activeEditor = editor;
+        if (editor) {
+            setLineDecorations(context, editor)
         }
-    });
+    })
+
+    // 当文档内容发生变化时候重新检测文档中的中文文案
+    const changeTextDocument = vscode.workspace.onDidChangeTextDocument((evnet) => {
+        if (activeEditor && evnet.document === activeEditor.document) {
+            setLineDecorations(context, activeEditor)
+        }
+    })
 
     // 监听设置里面的配置是否有更新
     vscode.workspace.onDidChangeConfiguration(function (event) {
@@ -81,7 +54,56 @@ export function activate(context: vscode.ExtensionContext) {
         context.globalState.update('languageMap', getLanguageMap(kiwiPath));
     });
 
-    context.subscriptions.push(disposable);
+    context.subscriptions.push(changeActiveTextEditor);
+    context.subscriptions.push(changeTextDocument);
+
+    // 这是悬浮时候显示文本内容
+    // const disposable = vscode.languages.registerHoverProvider(['json', 'javascript', 'typescript'], {
+    //     provideHover(document, position) {
+    //         const fileName = document.fileName;
+
+    //         // 获取一整行的内容
+    //         const lineText = document.getText(new vscode.Range(
+    //             position.line,
+    //             0,
+    //             position.line,
+    //             500
+    //         ));
+
+    //         // 如果是.kiwi文件夹或者这一行没有I18N这个字符就没有提示
+    //         if (fileName.includes('.kiwi') || !lineText.includes('I18N')) {
+    //             return undefined;
+    //         }
+
+    //         let paths: string[] = [];
+
+    //         const currentLanguage = context.globalState.get('currentLanguage');
+
+    //         if (!currentLanguage) {
+    //             return new vscode.Hover('请先在vscode设置里面配置语言');
+    //         }
+
+    //         try {
+    //             // @ts-ignore
+    //             const matchPath = lineText.match(/I18N[a-zA-Z.0-9]*/g) ? lineText.match(/I18N[a-zA-Z.0-9]*/g)[0] : '';
+    //             paths = matchPath.split('.');
+    //             paths.shift();
+    //         } catch (e) {
+    //             paths = [];
+    //         }
+
+    //         // 获取当前的语言包
+    //         const languageMap = context.globalState.get('languageMap');
+
+    //         if (languageMap) {
+    //             // @ts-ignore
+    //             const value = getValue(languageMap[currentLanguage], paths);
+    //             return new vscode.Hover(value ? String(value) : `当前语言为${currentLanguage},匹配不到对应的key`);
+    //         }
+
+    //         return undefined;
+    //     }
+    // });
 }
 
 export function deactivate(context: vscode.ExtensionContext) {
