@@ -14,4 +14,4 @@
 - 默认在package.json同级要有.octopus目录，里面为各语种的key/value
 
 ### 显示效果
-![显示效果]('./readme.jpg')
+![显示效果](https://raw.githubusercontent.com/TDFE/vscode-translate/main/readme.jpg)
