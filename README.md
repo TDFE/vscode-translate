@@ -1,5 +1,5 @@
 ### 安装插件
-- 在vscode应用商店搜索 vscode-translate 进行安装
+- 在vscode应用商店搜索 octopus-translate 进行安装
 
 ### 设置里面增加配置
 ``` javascript
