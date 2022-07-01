@@ -3,18 +3,16 @@
  * @Author: 郑泳健
  * @Date: 2022-05-27 18:22:28
  * @LastEditors: 郑泳健
- * @LastEditTime: 2022-07-01 14:23:23
+ * @LastEditTime: 2022-07-01 17:29:41
  */
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as _ from 'lodash';
 
-interface Language {
-    language: string;
-}
-
 interface Config {
-    translation: Language;
+    language?: string,
+    color?: string,
+    fontSize?: number;
 }
 
 class Position {
@@ -32,7 +30,8 @@ interface LangMap {
  * @returns
  */
 export const getLanguageMap = async (octopusPath: string, context: vscode.ExtensionContext) => {
-    const lang: string = context.globalState.get('currentLanguage') || 'zh-CN';
+    const octopusConf: Config | undefined = context.globalState.get('octopusConf');
+    const lang: string = octopusConf?.language || 'zh-CN';
     try {
         const list = fs.readdirSync(`${octopusPath}/${lang}`);
         let langMap: LangMap = {};
@@ -60,21 +59,18 @@ export const getLanguageMap = async (octopusPath: string, context: vscode.Extens
  * 获取当前的语言
  * @returns
  */
-export const getCurrentLanguage = () => {
-    let language = 'zh-CN';
-
+export const getOctopusConf = () => {
     try {
         const config = vscode.workspace.getConfiguration();
-        const tongdun: Config | undefined = config.get('tongdun');
-        language = tongdun ? tongdun.translation.language : '';
+        const octopus: Config | undefined = config.get('octopus');
+        return octopus;
     } catch (e) {
         vscode.window.showErrorMessage('请先在设置里面配置语言包');
-        return undefined;
+        return {
+            language: 'zh-CN'
+        };
     }
-
-    return language;
 };
-
 
 /**
  * I18N 中文显示位置
@@ -127,7 +123,7 @@ export const transformPosition = (pos: Position, editorText: string, toLastCol?:
  */
 export const setLineDecorations = (context: vscode.ExtensionContext, activeEditor: vscode.TextEditor) => {
     const code = activeEditor.document.getText();
-
+    const octopusConf: Config | undefined = context.globalState.get('octopusConf');
     const positions = findI18NPositions(context, code);
     let decorations = [];
     decorations = (positions || []).map((pos: Position) => {
@@ -137,11 +133,11 @@ export const setLineDecorations = (context: vscode.ExtensionContext, activeEdito
             range,
             renderOptions: {
                 after: {
-                    color: '#999999',
+                    color: octopusConf?.color || '#73935A',
                     contentText: `${pos && pos.cn && pos.cn.replace('\n', ' \\n')}`,
                     fontWeight: 'normal',
                     fontStyle: 'normal',
-                    textDecoration: 'none;'
+                    textDecoration: 'none'
                 }
             } as vscode.DecorationInstanceRenderOptions
         };
@@ -156,10 +152,11 @@ export const setLineDecorations = (context: vscode.ExtensionContext, activeEdito
  * @param code
  */
 export const findI18NPositions = (context: vscode.ExtensionContext, code: string) => {
-    const currentLanguage = context.globalState.get('currentLanguage');
+    const octopusConf: Config | undefined = context.globalState.get('octopusConf');
     const languageMap = context.globalState.get('languageMap');
+    const lang = octopusConf?.language;
     // @ts-ignore
-    const I18N = languageMap[currentLanguage];
+    const I18N = languageMap[lang];
     if (!I18N) {
         return [];
     }
@@ -179,35 +176,47 @@ export const findI18NPositions = (context: vscode.ExtensionContext, code: string
 /** 使用正则匹配{{}} */
 const getRegexMatches = (I18N: string, code: string) => {
     const lines = code.split('\n');
-    const positions: Position[] = [];
+    let positions: Position[] = [];
+
+    (lines || []).map((line, index) => {
+        const list = getPositionList(I18N, line, index, []);
+        positions = [...positions, ...list];
+    });
+    return positions;
+};
+
+/** 如果一行有多个I18N的情况 */
+const getPositionList = (I18N: string, line: string, index: number, list: Position[] = []) => {
     /** 匹配{{I18N.}} */
     const reg = new RegExp(/I18N.(.*)/);
     const normalReg = new RegExp(/I18N.(.*)/);
-    (lines || []).map((line, index) => {
-        const match = reg.exec(line);
-        let exps = _.get(match, [1]);
-        if (!exps) {
-            exps = _.get(normalReg.exec(line), [1]);
+    const match = reg.exec(line);
+    let exps = _.get(match, [1]);
+    if (!exps) {
+        exps = _.get(normalReg.exec(line), [1]);
+    }
+    if (exps) {
+        exps = exps.trim();
+        exps = exps.split('}')[0];
+        exps = exps.split(')')[0];
+        exps = exps.split(',')[0];
+        exps = exps.split(';')[0];
+        exps = exps.split('"')[0];
+        exps = exps.split("'")[0];
+        exps = exps.split(' ')[0];
+        const code = `I18N.${exps}`;
+        const position = new Position();
+        const transformedCn = _.get(I18N, exps.split('.'));
+        if (typeof transformedCn === 'string') {
+            position.cn = transformedCn;
+            (position as any).line = index;
+            position.code = code;
+            list.push(position);
         }
-        if (exps) {
-            exps = exps.trim();
-            exps = exps.split('}')[0];
-            exps = exps.split(')')[0];
-            exps = exps.split(',')[0];
-            exps = exps.split(';')[0];
-            exps = exps.split('"')[0];
-            exps = exps.split("'")[0];
-            exps = exps.split(' ')[0];
-            const code = `I18N.${exps}`;
-            const position = new Position();
-            const transformedCn = _.get(I18N, exps.split('.'));
-            if (typeof transformedCn === 'string') {
-                position.cn = transformedCn;
-                (position as any).line = index;
-                position.code = code;
-                positions.push(position);
-            }
-        }
-    });
-    return positions;
+    }
+    if (_.get(match, [1])?.includes('I18N.')) {
+        const arr = getPositionList(I18N, _.get(match, [1]) as string, index, []);
+        list = [...list, ...arr];
+    }
+    return list;
 };

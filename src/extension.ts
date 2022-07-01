@@ -3,24 +3,30 @@
  * @Author: 郑泳健
  * @Date: 2022-07-01 09:38:57
  * @LastEditors: 郑泳健
- * @LastEditTime: 2022-07-01 14:24:54
+ * @LastEditTime: 2022-07-01 16:21:44
  */
 import * as vscode from 'vscode';
 import * as fs from 'fs';
-import { getLanguageMap, getCurrentLanguage, setLineDecorations } from './utils/index';
+import * as path from 'path';
+import { getLanguageMap, getOctopusConf, setLineDecorations } from './utils/index';
 
 export async function activate(context: vscode.ExtensionContext) {
     // @ts-ignore
-    const octopusPath = vscode.workspace.workspaceFolders[0].uri.path + '/.octopus';
+    const optConfigPath = vscode.workspace.workspaceFolders[0].uri.path + '/otp-config.json';
 
-    if (!fs.existsSync(octopusPath)) {
+    if (!fs.existsSync(optConfigPath)) {
         return;
     }
+
+    const str = fs.readFileSync(optConfigPath, 'utf-8');
+    const otpDir = JSON.parse(str).otpDir;
+    // @ts-ignore
+    const octopusPath = path.resolve(vscode.workspace.workspaceFolders[0].uri.path, otpDir);
 
     // 获取当前工程的所有语言包,放到globalState
     context.globalState.update('languageMap', await getLanguageMap(octopusPath, context));
     // 获取当前的语言
-    context.globalState.update('currentLanguage', getCurrentLanguage());
+    context.globalState.update('octopusConf', getOctopusConf());
 
     let activeEditor = vscode.window.activeTextEditor;
 
@@ -48,7 +54,7 @@ export async function activate(context: vscode.ExtensionContext) {
         const configList = ['tongdun'];
         const affected = configList.some(item => event.affectsConfiguration(item));
         if (affected) {
-            context.globalState.update('currentLanguage', getCurrentLanguage());
+            context.globalState.update('octopusConf', getOctopusConf());
             context.globalState.update('languageMap', await getLanguageMap(octopusPath, context));
             if (activeEditor) {
                 setLineDecorations(context, activeEditor);
@@ -86,5 +92,5 @@ export async function activate(context: vscode.ExtensionContext) {
 
 export function deactivate(context: vscode.ExtensionContext) {
     context.globalState.update('languageMap', {});
-    context.globalState.update('currentLanguage', '');
+    context.globalState.update('octopusConf', {});
 }

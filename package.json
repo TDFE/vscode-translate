@@ -1,8 +1,8 @@
 {
     "name": "octopus-translate",
     "displayName": "octopus-translate",
-    "description": "同盾vscode翻译",
-    "version": "0.0.1",
+    "description": "vscode显示翻译",
+    "version": "0.0.2",
     "publisher": "zyj",
     "engines": {
         "vscode": "^1.67.0"
