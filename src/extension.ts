@@ -1,9 +1,22 @@
+/*
+ * @Description: 入口
+ * @Author: 郑泳健
+ * @Date: 2022-07-01 09:38:57
+ * @LastEditors: 郑泳健
+ * @LastEditTime: 2022-07-01 14:24:54
+ */
 import * as vscode from 'vscode';
+import * as fs from 'fs';
 import { getLanguageMap, getCurrentLanguage, setLineDecorations } from './utils/index';
 
 export async function activate(context: vscode.ExtensionContext) {
     // @ts-ignore
     const octopusPath = vscode.workspace.workspaceFolders[0].uri.path + '/.octopus';
+
+    if (!fs.existsSync(octopusPath)) {
+        return;
+    }
+
     // 获取当前工程的所有语言包,放到globalState
     context.globalState.update('languageMap', await getLanguageMap(octopusPath, context));
     // 获取当前的语言
