@@ -3,7 +3,7 @@
  * @Author: 郑泳健
  * @Date: 2022-05-27 18:22:28
  * @LastEditors: 郑泳健
- * @LastEditTime: 2022-07-01 17:29:41
+ * @LastEditTime: 2023-01-19 14:44:20
  */
 import * as vscode from 'vscode';
 import * as fs from 'fs';
@@ -26,6 +26,34 @@ interface LangMap {
 }
 
 /**
+ * 获取对应文件的语言
+ */
+function getLangData(fileName: string) {
+    if (fs.existsSync(fileName)) {
+      return getLangJson(fileName);
+    } else {
+      return {};
+    }
+}
+
+/**
+ * 获取文件 Json
+ */
+function getLangJson(fileName: string) {
+    const fileContent = fs.readFileSync(fileName, { encoding: 'utf8' });
+    let obj = fileContent.match(/export\s*default\s*({[\s\S]+);?$/)[1] || '';
+    obj = obj.replace(/\s*;\s*$/, '');
+    let jsObj = {};
+    try {
+      jsObj = eval('(' + obj + ')');
+    } catch (err) {
+      console.log(obj);
+      console.error(err);
+    }
+    return jsObj;
+  }
+
+/**
  * 获取所有语言包的配置
  * @returns
  */
@@ -38,9 +66,7 @@ export const getLanguageMap = async (octopusPath: string, context: vscode.Extens
         list.forEach((i: string) => {
             const suffixCheck = ['.js', '.ts', '.jsx', 'tsx'].some(it => i.endsWith(it));
             if (suffixCheck && !['index.js', 'index.jsx', 'index.ts', 'index.tsx'].includes(i)) {
-                const str = fs.readFileSync(`${octopusPath}/${lang}/${i}`, 'utf-8');
-                const replaceStr = str.replace(/export default|\;/g, '');
-                const json = eval("(" + replaceStr + ")");
+                const json = getLangData(`${octopusPath}/${lang}/${i}`);
                 const key = i.split('.')[0];
                 langMap[key] = json;
             }
