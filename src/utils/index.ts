@@ -3,7 +3,7 @@
  * @Author: 郑泳健
  * @Date: 2022-05-27 18:22:28
  * @LastEditors: 郑泳健
- * @LastEditTime: 2023-01-19 14:44:20
+ * @LastEditTime: 2023-01-19 14:49:19
  */
 import * as vscode from 'vscode';
 import * as fs from 'fs';
@@ -41,7 +41,7 @@ function getLangData(fileName: string) {
  */
 function getLangJson(fileName: string) {
     const fileContent = fs.readFileSync(fileName, { encoding: 'utf8' });
-    let obj = fileContent.match(/export\s*default\s*({[\s\S]+);?$/)[1] || '';
+    let obj = fileContent.match(/export\s*default\s*({[\s\S]+);?$/)?.[1] || '';
     obj = obj.replace(/\s*;\s*$/, '');
     let jsObj = {};
     try {
