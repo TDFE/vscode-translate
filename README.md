@@ -3,10 +3,9 @@
 
 ### 设置里面增加配置
 ``` javascript
-"tongdun": {
-    "translation": {
-        "language": "zh-CN" // 配置按照那种语言进行显示，如果选择中文就会显示中文，如果改为英文就显示英文
-    }
+"octopus": {
+    "language": "en-US", // 非必填 默认zh-CN
+    "color": "red" // 非必填,默认“#73935A”
 }
 ```
 

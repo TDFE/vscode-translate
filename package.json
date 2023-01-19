@@ -2,7 +2,7 @@
     "name": "octopus-translate",
     "displayName": "octopus-translate",
     "description": "vscode显示翻译",
-    "version": "0.0.3",
+    "version": "0.0.4",
     "publisher": "zyj",
     "engines": {
         "vscode": "^1.67.0"
